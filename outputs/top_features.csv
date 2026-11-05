@@ -1,0 +1,16 @@
+,importance
+CoffeeHouse_never,0.04572794
+coupon_Restaurant(20),0.042157322
+coupon_Carry out & Take away,0.03434938
+destination_No Urgent Place,0.021778403
+toCoupon_GEQ25min,0.018656924
+expiration_2h,0.018531488
+weather_Sunny,0.017414847
+coupon_Coffee House,0.01731236
+CoffeeHouse_less1,0.017091792
+Bar_never,0.016647331
+direction_same,0.015386785
+Bar_gt8,0.014183374
+time_6PM,0.014172472
+CarryAway_less1,0.014132785
+income_$50000 - $62499,0.013865568

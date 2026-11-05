@@ -1,0 +1,4 @@
+Model,Accuracy,Precision,Recall,F1,ROC-AUC,CV Accuracy (mean),CV Accuracy (std)
+XGBoost,0.749,0.7545,0.8267,0.7889,0.8189,0.7526,0.0101
+Random Forest,0.7296,0.7279,0.8358,0.7781,0.7932,0.7329,0.0099
+Logistic Regression,0.6776,0.7017,0.7512,0.7256,0.7229,0.6871,0.0141
