@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Coupon Acceptance Predictor</title>
+<style>
+  :root {
+    --bg: #e9ebec;
+    --panel: #f7f8f8;
+    --ink: #1f2a30;
+    --muted: #5d6b73;
+    --line: #c5cbce;
+    --signal: #f2b705;
+    --yes: #1e6f6b;
+    --no: #b3402f;
+    --radius: 6px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161c20;
+      --panel: #1f272c;
+      --ink: #e8ecee;
+      --muted: #9aa8b0;
+      --line: #35424a;
+      --yes: #4fb3ad;
+      --no: #e07a68;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Segoe UI", "Avenir Next", system-ui, -apple-system, Roboto, Arial, sans-serif;
+    line-height: 1.5;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 32px 20px 56px; }
+  header { margin-bottom: 28px; }
+  h1 { font-size: 2rem; margin: 0 0 6px; letter-spacing: -0.01em; }
+  header p { margin: 0; color: var(--muted); max-width: 60ch; }
+
+  .layout { display: grid; grid-template-columns: 1fr 320px; gap: 28px; align-items: start; }
+  @media (max-width: 860px) { .layout { grid-template-columns: 1fr; } }
+
+  fieldset {
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--panel);
+    margin: 0 0 20px;
+    padding: 18px 20px 6px;
+  }
+  legend { font-weight: 700; padding: 0 8px; font-size: 1.05rem; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px 18px; }
+  .field { margin-bottom: 14px; display: flex; flex-direction: column; }
+  label { font-size: 0.88rem; font-weight: 600; margin-bottom: 4px; }
+  select {
+    font: inherit;
+    color: var(--ink);
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 9px 10px;
+  }
+  select:focus-visible, button:focus-visible {
+    outline: 3px solid var(--signal);
+    outline-offset: 2px;
+  }
+
+  button {
+    font: inherit;
+    font-weight: 700;
+    width: 100%;
+    padding: 13px 18px;
+    border: 0;
+    border-radius: var(--radius);
+    background: var(--signal);
+    color: #1f2a30;
+    cursor: pointer;
+  }
+  button:hover { filter: brightness(0.96); }
+
+  aside { position: sticky; top: 20px; }
+  .result {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 22px 22px 24px;
+    border-left: 8px solid var(--line);
+  }
+  .result.yes { border-left-color: var(--yes); }
+  .result.no { border-left-color: var(--no); }
+  .result h2 { margin: 0 0 8px; font-size: 1.25rem; }
+  .result .verdict { font-size: 1.6rem; font-weight: 800; margin: 4px 0 6px; }
+  .result.yes .verdict { color: var(--yes); }
+  .result.no .verdict { color: var(--no); }
+  .result p { margin: 0; color: var(--muted); }
+  .bar { height: 10px; background: var(--bg); border-radius: 99px; overflow: hidden; margin: 12px 0 6px; }
+  .bar span { display: block; height: 100%; background: var(--yes); }
+  .result.no .bar span { background: var(--no); }
+  .error { color: var(--no); font-weight: 600; }
+  .hint { color: var(--muted); font-size: 0.85rem; margin-top: 10px; }
+</style>
+</head>
+<body>
+
+{# ---- Helper: renders one <select>. Keeps the user's previous choice after a prediction. ---- #}
+{% macro pick(name, label, options, fd) %}
+  <div class="field">
+    <label for="{{ name }}">{{ label }}</label>
+    <select id="{{ name }}" name="{{ name }}" required>
+      {% for o in options %}
+        {% set v = o if o is string else o[0] %}
+        {% set t = o if o is string else o[1] %}
+        <option value="{{ v }}" {% if fd.get(name) is not none and fd.get(name)|string == v|string %}selected{% endif %}>{{ t }}</option>
+      {% endfor %}
+    </select>
+  </div>
+{% endmacro %}
+
+{% set fd = form_data if (form_data is defined and form_data) else {} %}
+
+<div class="wrap">
+  <header>
+    <h1>Coupon Acceptance Predictor</h1>
+    <p>Describe the driving situation and the driver. The model estimates whether the driver will accept an in-vehicle coupon.</p>
+  </header>
+
+  <div class="layout">
+    <form method="POST" action="/predict">
+
+      <fieldset>
+        <legend>Trip</legend>
+        <div class="grid">
+          {{ pick('destination', 'Destination', ['No Urgent Place', 'Home', 'Work'], fd) }}
+          {{ pick('passanger', 'Passengers', [('Alone','Alone'), ('Friend(s)','Friend(s)'), ('Kid(s)','Kid(s)'), ('Partner','Partner')], fd) }}
+          {{ pick('time', 'Time of day', ['7AM', '10AM', '2PM', '6PM', '10PM'], fd) }}
+          {{ pick('weather', 'Weather', ['Sunny', 'Rainy', 'Snowy'], fd) }}
+          {{ pick('temperature', 'Temperature', [('30','30 °F (cold)'), ('55','55 °F (mild)'), ('80','80 °F (hot)')], fd) }}
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Coupon</legend>
+        <div class="grid">
+          {{ pick('coupon', 'Venue type', ['Restaurant(<20)', 'Coffee House', 'Carry out & Take away', 'Bar', 'Restaurant(20-50)'], fd) }}
+          {{ pick('expiration', 'Expires in', [('2h','2 hours'), ('1d','1 day')], fd) }}
+          {{ pick('distance', 'Drive time to venue', [('5','Under 15 minutes'), ('15','15 to 25 minutes'), ('25','25 minutes or more')], fd) }}
+          {{ pick('on_the_way', 'Venue is on the way', [('1','Yes, same direction'), ('0','No, opposite direction')], fd) }}
+        </div>
+        <input type="hidden" name="toCoupon_GEQ5min" value="1">
+        <input type="hidden" name="toCoupon_GEQ15min" id="toCoupon_GEQ15min" value="0">
+        <input type="hidden" name="toCoupon_GEQ25min" id="toCoupon_GEQ25min" value="0">
+        <input type="hidden" name="direction_same" id="direction_same" value="1">
+        <input type="hidden" name="direction_opp" id="direction_opp" value="0">
+      </fieldset>
+
+      <fieldset>
+        <legend>Driver</legend>
+        <div class="grid">
+          {{ pick('gender', 'Gender', ['Female', 'Male'], fd) }}
+          {{ pick('age', 'Age', [('below21','Below 21'), '21', '26', '31', '36', '41', '46', ('50plus','50 or older')], fd) }}
+          {{ pick('maritalStatus', 'Marital status', ['Single', 'Married partner', 'Unmarried partner', 'Divorced', 'Widowed'], fd) }}
+          {{ pick('has_children', 'Has children', [('0','No'), ('1','Yes')], fd) }}
+          {{ pick('education', 'Education', ['Some High School', 'High School Graduate', 'Some college - no degree', 'Associates degree', 'Bachelors degree', 'Graduate degree (Masters or Doctorate)'], fd) }}
+          {{ pick('occupation', 'Occupation', [
+              'Architecture & Engineering', 'Arts Design Entertainment Sports & Media', 'Building & Grounds Cleaning & Maintenance',
+              'Business & Financial', 'Community & Social Services', 'Computer & Mathematical', 'Construction & Extraction',
+              'Education&Training&Library', 'Farming Fishing & Forestry', 'Food Preparation & Serving Related',
+              'Healthcare Practitioners & Technical', 'Healthcare Support', 'Installation Maintenance & Repair', 'Legal',
+              'Life Physical Social Science', 'Management', 'Office & Administrative Support', 'Personal Care & Service',
+              'Production Occupations', 'Protective Service', 'Retired', 'Sales & Related', 'Student',
+              'Transportation & Material Moving', 'Unemployed'], fd) }}
+          {{ pick('income', 'Yearly income (USD)', ['Less than $12500', '$12500 - $24999', '$25000 - $37499', '$37500 - $49999', '$50000 - $62499', '$62500 - $74999', '$75000 - $87499', '$87500 - $99999', '$100000 or More'], fd) }}
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>How often the driver visits (per month)</legend>
+        {% set freq = [('never','Never'), ('less1','Less than 1'), ('1~3','1 to 3'), ('4~8','4 to 8'), ('gt8','More than 8')] %}
+        <div class="grid">
+          {{ pick('Bar', 'Bars', freq, fd) }}
+          {{ pick('CoffeeHouse', 'Coffee houses', freq, fd) }}
+          {{ pick('CarryAway', 'Carry out and take away', freq, fd) }}
+          {{ pick('RestaurantLessThan20', 'Restaurants under $20', freq, fd) }}
+          {{ pick('Restaurant20To50', 'Restaurants $20 to $50', freq, fd) }}
+        </div>
+      </fieldset>
+
+      <button type="submit">Predict acceptance</button>
+    </form>
+
+    <aside aria-live="polite">
+      {% if error is defined and error %}
+        <div class="result no">
+          <h2>Prediction failed</h2>
+          <p class="error">{{ error }}</p>
+          <p class="hint">Check that every field is filled in and try again.</p>
+        </div>
+      {% elif prediction is defined and prediction is not none %}
+        {% set p = prediction|string|upper %}
+        {% set accepted = ('ACCEPT' in p and 'REJECT' not in p) or p in ['1', '1.0', 'TRUE', 'YES'] %}
+        <div class="result {{ 'yes' if accepted else 'no' }}">
+          <h2>Result</h2>
+          <div class="verdict">{{ 'Likely to accept' if accepted else 'Unlikely to accept' }}</div>
+          {% if probability is defined and probability is not none %}
+            {% set pct = probability|float %}
+            <div class="bar" role="img" aria-label="Acceptance probability {{ '%.0f'|format(pct) }} percent"><span style="width: {{ '%.0f'|format(pct) }}%"></span></div>
+            <p>Acceptance probability: {{ '%.1f'|format(pct) }}%</p>
+          {% endif %}
+        </div>
+      {% else %}
+        <div class="result">
+          <h2>Result</h2>
+          <p>Fill in the form and choose Predict acceptance. The result appears here.</p>
+        </div>
+      {% endif %}
+    </aside>
+  </div>
+</div>
+
+<script>
+  // Turns the two friendly dropdowns into the dataset's original 0/1 columns.
+  (function () {
+    var distance = document.getElementById('distance');
+    var onTheWay = document.getElementById('on_the_way');
+    function sync() {
+      var d = parseInt(distance.value, 10);
+      document.getElementById('toCoupon_GEQ15min').value = d >= 15 ? 1 : 0;
+      document.getElementById('toCoupon_GEQ25min').value = d >= 25 ? 1 : 0;
+      var same = onTheWay.value === '1';
+      document.getElementById('direction_same').value = same ? 1 : 0;
+      document.getElementById('direction_opp').value = same ? 0 : 1;
+    }
+    distance.addEventListener('change', sync);
+    onTheWay.addEventListener('change', sync);
+    sync();
+  })();
+</script>
+</body>
+</html>

@@ -3,7 +3,9 @@ numpy
 matplotlib
 seaborn
 scikit-learn
-xgboost
+xgboost-cpu==3.4.1
 shap
 joblib
 jupyter
+flask
+gunicorn
