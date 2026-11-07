@@ -120,3 +120,49 @@ Python, pandas, NumPy, scikit-learn, XGBoost, SHAP, matplotlib, seaborn.
 ## Data source and citation
 
 Wang, T., Rudin, C., Doshi-Velez, F., Liu, Y., Klampfl, E., and MacNeille, P. (2017). *A Bayesian Framework for Learning Rule Sets for Interpretable Classification.* Journal of Machine Learning Research, 18(70), 1-37. Dataset from the UCI Machine Learning Repository.
+
+## Live Demo
+
+**Try it here:** [your-environment-url.ap-south-1.elasticbeanstalk.com](http://your-environment-url.ap-south-1.elasticbeanstalk.com)
+
+![App screenshot](images/app_screenshot.png)
+
+The model is served through a Flask web app. You describe a driving situation (destination, passengers, weather, time of day), the coupon (venue type, expiry, distance), and the driver's profile. The app returns whether the driver is likely to accept the coupon, along with the acceptance probability.
+
+> The demo may be offline when I'm not running it. The screenshot above shows the interface.
+
+## Model
+
+- **Dataset:** UCI in-vehicle coupon recommendation data
+- **Best model:** XGBoost, with test ROC-AUC 0.819 and F1 0.789
+- **Baseline:** Logistic regression, with ROC-AUC 0.723
+
+## Run locally
+
+```bash
+git clone https://github.com/akashprasad8175-maker/Coupon-Acceptance-Prediction-Model.git
+cd Coupon-Acceptance-Prediction-Model
+python -m venv .venv
+.venv\Scripts\activate        # Windows
+pip install -r requirements.txt
+python app.py
+```
+
+Then open http://127.0.0.1:5000
+
+## Deployment
+
+Deployed on **AWS Elastic Beanstalk** (Python platform) using gunicorn, with a `Procfile` containing `web: gunicorn app:app`.
+
+Project structure used for deployment:
+
+```
+app.py
+requirements.txt
+Procfile
+templates/index.html
+models/Best_Model.pkl
+data/
+```
+
+`requirements.txt` uses `xgboost-cpu` instead of `xgboost`, because the standard package pulls in large GPU libraries that failed to install on the CPU-only server.
